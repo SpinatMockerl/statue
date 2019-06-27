@@ -1,0 +1,1 @@
+output$pageStub = renderUI(fluidRow("You chose ", input$choice))
