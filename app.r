@@ -69,18 +69,18 @@ server = function(input, output) {
   })
   
   observeEvent(input$a2_goto2, {
-    a2_allowedVariables = c()
+    rv$a2_allowedVariables = c()
     
     if (input$a2_cutoff == 0) {
-      a2_allowedVariables = colnames(swiss[, colnames(swiss) != input$a1_mode])
+      rv$a2_allowedVariables = colnames(swiss[, colnames(swiss) != input$a1_mode])
       
-      output$pairsMatrix = plot(pairs(swiss, upper.panel = panel.cor))
+      output$pairsMatrix = renderPlot(pairs(swiss, upper.panel = panel.cor))
       
       rv$redirect = "a2_2b"
     } else {
       a2_uncorrelated = uncor(swiss, yIndex = which(colnames(swiss) == input$a1_mode))
       
-      a2_allowedVariables = unique(c(
+      rv$a2_allowedVariables = unique(c(
         a2_uncorrelated[, 1],
         a2_uncorrelated[, 2]
       ))
@@ -91,6 +91,50 @@ server = function(input, output) {
     
     print(c("Redirect set to: ", rv$redirect))
     
+  })
+  
+  observeEvent(input$a2_goto3, {
+    a2_corWarning = FALSE
+    
+    if (input$a2_cutoff != 0) {
+      for (var in input$a2_variables) {
+        if (var %in% a2_uncorrelated[, 1] && var %in% a2_uncorrelated[, 2]) {
+          insertUI(input$a2_variables, "afterEnd", "WARNING: Some of your chosen explanatory variables are correlated, based on your chosen cutoff value. Continue anyway?")
+        }
+      }
+    }
+    
+    print("A2: Passed warning-check")
+    print(input$a2_variables)
+    
+    xTerms = c()
+    for (varName in input$a2_variables) {
+      xTerms = c(xTerms, paste0("swiss", "[, '", varName, "']"))
+    }
+    
+    print("A2: xTerms set")
+    
+    model = lm(reformulate(response = paste0("swiss$", input$a1_mode),
+      termlabels = xTerms))
+    
+    print("A2: Model created")
+    
+    output$a2_modelPlot1 = renderPlot(plot(model, 1)) # Homoskedastizität
+    output$a2_modelPlot2 = renderPlot(plot(model, 2)) # Normalverteilung
+    output$a2_modelPlot3 = renderPlot(plot(model, 3))
+    output$a2_modelPlot5 = renderPlot(plot(model, 5)) # Leverage
+    
+    # Ganzes Summary (Liste) kann nicht ausgegeben werden
+    output$a2_modelSummary = renderText(mean(model$residuals)) # Mittelwert
+    
+    output$a2_modelPairs = renderPlot(pairs(swiss[input$a2_variables],
+      upper.panel = panel.cor))
+    
+    print("A2: Model plots rendered")
+    
+    rv$redirect = "a2_3"
+    
+    print(c("Redirect set to: ", rv$redirect))
   })
 
 }
