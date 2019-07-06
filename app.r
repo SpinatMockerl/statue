@@ -1,4 +1,4 @@
-# setwd("~/FH/Bioinformatik/2/StatUE/app/")
+setwd("~/FH/Bioinformatik/2/StatUE/app/")
 
 library(shiny)
 source("functions.r", local = TRUE)
@@ -60,14 +60,22 @@ server = function(input, output) {
     print(c("Redirect set to: ", rv$redirect))
   })
   
+  # a1.r - Datenexploration oder
+  # a2.r - Cutoff für X-Korrelationen Wählen
   observeEvent(input$a1_modeStart, {
     if (input$a1_mode == "explore") {
+      #for () {
+        
+      #}
+      
       rv$redirect = "a1"
     } else {
       rv$redirect = "a2"
     }
   })
   
+  
+  # a2_2b.r - Scatterplot/Pairs-Matrix + Variablenselektion
   observeEvent(input$a2_goto2, {
     rv$a2_allowedVariables = c()
     
@@ -93,6 +101,8 @@ server = function(input, output) {
     
   })
   
+  
+  # a2_3.r - Überprüfen der Modellvoraussetzungen:
   observeEvent(input$a2_goto3, {
     a2_corWarning = FALSE
     
@@ -135,6 +145,60 @@ server = function(input, output) {
     rv$redirect = "a2_3"
     
     print(c("Redirect set to: ", rv$redirect))
+  })
+  
+  # a2_2b.r - Rückkehr zur Variablenselektion:
+  observeEvent(input$a2_goback, {
+    rv$redirect = "a2_2b"
+    print(c("redirect set to", rv$redirect))
+  })
+  
+  # a2_final.r - Ergebnis der Linearen Regression:
+  observeEvent(input$a2_final, {
+    # Findet durch sequentielle ANOVAs das optimale Modell:
+    model = findBestLM(swiss, pValue = input$a2_pValue,
+      yName = input$a1_mode, xNames = input$a2_variables)
+    
+    print("Optimal Model found:")
+    print(summary(model))
+    
+    # Findet die Namen der X-Variablen des optimalen Modells:
+    xNames = c()
+    for (i in 2:length(variable.names(model))) {
+      print(variable.names(model)[i])
+      
+      idx = as.numeric(substr(variable.names(model)[i],
+             9, (nchar(variable.names(model)[i]) -1)
+      ))
+      
+      xNames = c(xNames, colnames(swiss)[idx])
+    }
+    
+    print("Names of X-variables found:")
+    print(xNames)
+    print("Building model string...")
+    
+    # speichert Lineares Model als Text
+    rv$a2_modelText = paste0(input$a1_mode, " ~ ")
+    
+    print(rv$a2_modelText)
+    
+    finalX = xNames[length(xNames)]
+    for (x in xNames) {
+      rv$a2_modelText = paste0(rv$a2_modelText, x)
+      
+      print(rv$a2_modelText)
+      
+      if (x != finalX) {
+        rv$a2_modelText = paste0(rv$a2_modelText, " + ")
+      }
+    }
+    
+    print("Model converted to text:")
+    print(rv$a2_modelText)
+    
+    rv$redirect = "a2_final"
+    print(c("redirect set to", rv$redirect))
   })
 
 }

@@ -1,6 +1,6 @@
 output$pageStub = renderUI(fluidPage(
   column(4,inputPanel(
-    "EXPLANATION",
+    #"EXPLANATION",
     checkboxGroupInput("a2_variables",
       "Which variables would you like to include?",
       choices = rv$a2_allowedVariables
