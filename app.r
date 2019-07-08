@@ -1,6 +1,7 @@
 setwd("~/FH/Bioinformatik/2/StatUE/app/")
 
 library(shiny)
+library(vioplot)
 source("functions.r", local = TRUE)
 
 
@@ -8,10 +9,8 @@ source("functions.r", local = TRUE)
   # (Nur die Startseiten der jeweiligen Aufgabe, keine folgenden;
   # echter Dateiname ist der hier angegebene Name mit ".r" hinten dran;
   # ACHTUNG: Kleines r):
-fnamesVisible = c("Crash Test Dummy" = "dummy",
-                  "Swiss-Dataset" = "a1Start",
-                  "A3 - PIMA: logistic Regression" = "a3",
-                  "A4 - PIMA: linear Regression" = "a4")
+fnamesVisible = c("Swiss-Dataset" = "a1Start",
+                  "Crash Test Dummy" = "dummy")
 # Kann verwendet werden, um sicherzustellen, dass nur zugelassene Quelldateien
   # verwendet werden (nicht implementiert):
 fnamesHidden = c(fnamesVisible, "three3")
@@ -64,56 +63,40 @@ server = function(input, output) {
   # a2.r - Cutoff für X-Korrelationen Wählen
   observeEvent(input$a1_modeStart, {
     if (input$a1_mode == "explore") {
-      #for () {
-        
-      #}
+      output$pairsMatrixFULL = renderPlot(
+        pairs(swiss, upper.panel = panel.cor))
+      
+      lapply(colnames(swiss), function(var) {
+        output[[paste0("qq", var)]] = renderPlot({
+          qqnorm(swiss[[var]], main = var)
+          qqline(swiss[[var]])
+        })
+        output[[paste0("vio", var)]] = renderPlot(
+          vioplot(swiss[[var]], main = var)
+        )
+      })
       
       rv$redirect = "a1"
+      print(c("Redirect set to: ", rv$redirect))
     } else {
-      rv$redirect = "a2"
-    }
-  })
-  
-  
-  # a2_2b.r - Scatterplot/Pairs-Matrix + Variablenselektion
-  observeEvent(input$a2_goto2, {
-    rv$a2_allowedVariables = c()
-    
-    if (input$a2_cutoff == 0) {
-      rv$a2_allowedVariables = colnames(swiss[, colnames(swiss) != input$a1_mode])
+      rv$a2_allowedVariables = c()
+      
+      
+      rv$a2_allowedVariables = colnames(
+        swiss[, colnames(swiss) != input$a1_mode]
+      )
       
       output$pairsMatrix = renderPlot(pairs(swiss, upper.panel = panel.cor))
       
-      rv$redirect = "a2_2b"
-    } else {
-      a2_uncorrelated = uncor(swiss, yIndex = which(colnames(swiss) == input$a1_mode))
+      rv$redirect = "a2"
+      print(c("Redirect set to: ", rv$redirect))
       
-      rv$a2_allowedVariables = unique(c(
-        a2_uncorrelated[, 1],
-        a2_uncorrelated[, 2]
-      ))
-      
-      rv$redirect = "a2_2a"
-      
+      print(c("Redirect set to: ", rv$redirect))
     }
-    
-    print(c("Redirect set to: ", rv$redirect))
-    
   })
   
-  
-  # a2_3.r - Überprüfen der Modellvoraussetzungen:
-  observeEvent(input$a2_goto3, {
-    a2_corWarning = FALSE
-    
-    if (input$a2_cutoff != 0) {
-      for (var in input$a2_variables) {
-        if (var %in% a2_uncorrelated[, 1] && var %in% a2_uncorrelated[, 2]) {
-          insertUI(input$a2_variables, "afterEnd", "WARNING: Some of your chosen explanatory variables are correlated, based on your chosen cutoff value. Continue anyway?")
-        }
-      }
-    }
-    
+  # a2_2.r - Überprüfen der Modellvoraussetzungen:
+  observeEvent(input$a2_goto2, {
     print("A2: Passed warning-check")
     print(input$a2_variables)
     
@@ -142,14 +125,14 @@ server = function(input, output) {
     
     print("A2: Model plots rendered")
     
-    rv$redirect = "a2_3"
+    rv$redirect = "a2_2"
     
     print(c("Redirect set to: ", rv$redirect))
   })
   
-  # a2_2b.r - Rückkehr zur Variablenselektion:
+  # a2.r - Rückkehr zur Variablenselektion:
   observeEvent(input$a2_goback, {
-    rv$redirect = "a2_2b"
+    rv$redirect = "a2"
     print(c("redirect set to", rv$redirect))
   })
   
@@ -196,6 +179,22 @@ server = function(input, output) {
     
     print("Model converted to text:")
     print(rv$a2_modelText)
+    
+    # R-squared:
+    rv$a2_rSquared = round(summary(model)$r.squared, 3)
+    
+    # Residuen-Plot:
+    obs = swiss[[input$a1_mode]]
+    fitted = model$fitted.values
+    
+    output$a2_residualPlot = renderPlot({
+      plot(obs, fitted,
+        xlim = range(obs, fitted), ylim = range(obs, fitted),
+        main = "Residuals vs. Fitted"
+      )
+      abline(0, 1, col = "red")
+      segments(obs, fitted, obs, fitted + residuals(model))
+    })
     
     rv$redirect = "a2_final"
     print(c("redirect set to", rv$redirect))

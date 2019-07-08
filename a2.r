@@ -1,8 +1,13 @@
 output$pageStub = renderUI(fluidPage(
-  inputPanel(
-    numericInput("a2_cutoff",
-      "Please select a maximum absolute correlation between explanatory variables",
-      value = 0, min = 0, max = 1, step = 0.01),
+  column(12, inputPanel(
+    #"EXPLANATION",
+    checkboxGroupInput("a2_variables",
+      "Which variables would you like to include?",
+      choices = rv$a2_allowedVariables
+    ),
     actionButton("a2_goto2", "Go!")
-  )
+  )),
+  column(12, mainPanel(
+    plotOutput("pairsMatrix")
+  ))
 ))
